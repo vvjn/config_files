@@ -1,0 +1,51 @@
+FROM vipin/gpu
+
+RUN groupadd -r -g 1001 vvijayan && useradd -s /bin/bash -m -r -u 1001 -g vvijayan vvijayan
+
+USER vvijayan
+WORKDIR /home/vvijayan
+
+COPY --chown=vvijayan:vvijayan conda_pkgs.sh .
+RUN /bin/bash conda_pkgs.sh && rm conda_pkgs.sh
+
+WORKDIR /home/vvijayan/.emacs.d
+COPY --chown=vvijayan:vvijayan emacs_init.el init.el
+COPY --chown=vvijayan:vvijayan  emacs_pkgs.el emacs_pkgs.el
+RUN emacs --batch -l emacs_pkgs.el
+
+WORKDIR /home/vvijayan/.config
+COPY --chown=vvijayan:vvijayan dotflake8 flake8
+
+WORKDIR /home/vvijayan
+RUN mkdir -p opt && cd opt && \
+    curl -o julia.tar.gz -O https://julialang-s3.julialang.org/bin/linux/x64/1.4/julia-1.4.0-linux-x86_64.tar.gz && \
+    tar xf julia.tar.gz && \
+    mv julia-1.4.0 julia && \
+    rm julia.tar.gz
+
+WORKDIR /home/vvijayan
+RUN echo 'export PATH=/home/vvijayan/opt/julia/bin:$PATH' >> .bashrc && \
+    echo 'export PYTHON=/home/vvijayan/opt/conda/envs/modis/bin/python' >> .bashrc
+
+WORKDIR /home/vvijayan/opt
+COPY julia_pkgs.sh .
+COPY julia_usings.sh .
+RUN ["/bin/bash", "-i", "julia_pkgs.sh"]
+RUN ["/bin/bash", "-i", "julia_usings.sh"]
+
+USER root
+RUN echo "root:docker!" | chpasswd
+
+WORKDIR /opt
+COPY Dockerfile.torch_user .
+
+USER vvijayan
+
+WORKDIR /home/vvijayan
+RUN echo "alias cs=\"emacsclient -nw\"" >> .bashrc && \
+    echo "bind '\"\\C-p\": history-search-backward'" >> .bashrc && \
+    echo "bind '\"\\C-n\": history-search-backward'" >> .bashrc && \
+    echo "export TMOUT=360000" >> .bashrc && \
+    echo "alias jlab=\"jupyter-lab --ip=0.0.0.0 --no-browser\"" >> .bashrc
+
+CMD emacs --daemon && bash

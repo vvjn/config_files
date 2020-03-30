@@ -1,0 +1,10 @@
+allow_other_channels: False
+channel_alias: file://local/repo.continuum.io/pkgs/
+channel:
+  - main
+  - r
+offline: True
+
+# channels:
+#   - file://local/repo.continuum.io/pkgs/main
+#   - file://local/repo.continuum.io/pkgs/r

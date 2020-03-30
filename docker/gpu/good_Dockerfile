@@ -1,0 +1,50 @@
+FROM nvidia/cuda:10.1-cudnn7-devel-ubuntu16.04
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+         build-essential cmake git curl ca-certificates \
+         libjpeg-dev libpng-dev libtbb2 software-properties-common \
+         autoconf automake autotools-dev ispell \
+         libacl1-dev libasound2-dev liblockfile-dev libdbus-1-dev libgif-dev \
+         libgnutls28-dev libgpm-dev libjansson-dev libm17n-dev libncurses5-dev \
+         libselinux1-dev libxml2-dev texinfo openssh-client openssh-server \
+         gdb rsync vim tmux \
+         r-base && \
+    add-apt-repository ppa:kelleyk/emacs && \
+    apt-get update && \
+    apt-get install -y emacs26-nox && \
+    systemctl enable ssh
+
+RUN apt-get install -y --no-install-recommends \
+         gfortran unrar wget ffmpeg apt-utils aptitude dialog apt-file less file
+
+RUN curl -o ~/miniconda.sh -O https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+     chmod +x ~/miniconda.sh && \
+     ~/miniconda.sh -b -p /opt/conda && \
+     rm ~/miniconda.sh
+
+RUN /opt/conda/bin/conda install -y python=3.7 anaconda && \
+    /opt/conda/bin/conda install -y torchvision cudatoolkit=10.1 -c pytorch && \
+    /opt/conda/bin/conda install -y keras-gpu tensorflow-gpu && \
+    /opt/conda/bin/conda install -y gdal && \
+    /opt/conda/bin/conda install -y jedi flake8 autopep8 yapf black rope \
+        progressbar2 python-utils r-base r-essentials && \
+    /opt/conda/bin/conda clean -ya
+
+ENV PATH /opt/conda/bin:$PATH
+
+WORKDIR /root
+RUN echo "bind '\"\\C-p\": history-search-backward'" >> .bashrc && \
+    echo "bind '\"\\C-n\": history-search-backward'" >> .bashrc && \
+    echo "export TMOUT=360000" >> .bashrc
+
+WORKDIR /root
+RUN sed 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config > sshd_config && \
+    cp sshd_config /etc/ssh/sshd_config && rm sshd_config
+
+WORKDIR /opt
+COPY Dockerfile Dockerfile_ml
+
+WORKDIR /workspace
+RUN chmod -R a+w .
+
+ENTRYPOINT service ssh restart && bash

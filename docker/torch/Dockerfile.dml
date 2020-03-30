@@ -1,0 +1,25 @@
+FROM vipin/cml
+
+USER root
+RUN apt-get install -y texlive-full
+
+WORKDIR /opt
+COPY Dockerfile.dml .
+
+WORKDIR /home/vvijayan
+COPY run_gpu_stuff.sh .
+RUN chown vvijayan:vvijayan run_gpu_stuff.sh
+
+#WORKDIR /root
+#COPY code_1.42.0-1580986622_amd64.deb .
+#RUN apt install -y ./code_1.42.0-1580986622_amd64.deb 
+
+RUN echo "root:docker!" | chpasswd
+
+#WORKDIR /root
+#RUN sed 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config > sshd_config && \
+#    cp sshd_config /etc/ssh/sshd_config && rm sshd_config
+
+USER vvijayan
+WORKDIR /home/vvijayan
+CMD emacs --daemon && bash

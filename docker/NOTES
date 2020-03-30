@@ -1,0 +1,5 @@
+docker run --gpus all --name xman -p 2223:22 -p 8889:8888 -it vipin/emacs
+docker run --gpus all --name xman2 -p 2224:22 -p 8890:8888 -v /home/vvijayan:/workspace/host -v /:/workspace/roothost -v /local:/local -it vipin/emacs
+docker run --gpus all --name xman2 -p 2231:22 -p 8891:8888 -v /home/vvijayan:/workspace/home -v /local:/local -v /:/localroot -it vipin/ml
+git config --global user.name "Vipin Vijayan"
+git config --global user.email "vvijayan@radiancetech.com"

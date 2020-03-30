@@ -1,0 +1,32 @@
+FROM vipin/md
+
+RUN groupadd -r -g 1001 vvijayan && useradd -s /bin/bash -m -r -u 1001 -g vvijayan vvijayan
+
+WORKDIR /opt
+COPY Dockerfile Dockerfile_umd
+
+USER vvijayan
+WORKDIR /home/vvijayan
+RUN mkdir opt && \
+    curl -o ~/miniconda.sh -O https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    chmod +x ~/miniconda.sh && \
+    ~/miniconda.sh -b -p ~/opt/conda && \
+    rm ~/miniconda.sh
+
+ENV PATH /home/vvijayan/opt/conda/bin:$PATH
+
+WORKDIR /home/vvijayan
+RUN conda update -n base -c defaults conda && conda create -y --name modis python=3.7
+
+WORKDIR /home/vvijayan
+RUN conda init bash && \
+    echo "conda activate modis" >> .bashrc
+
+ENV PYTHON /home/vvijayan/.conda/envs/modis/bin/python
+
+WORKDIR /workspace
+COPY conda_pkgs.sh .
+RUN sh conda_pkgs.sh
+
+WORKDIR /home/vvijayan
+ENTRYPOINT emacs --daemon && bash

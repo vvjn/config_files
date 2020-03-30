@@ -1,0 +1,11 @@
+FROM vipin/gpu_user
+
+USER vvijayan
+# Make RUN commands use `bash --login`:
+# SHELL ["/bin/bash", "-i", "-c"]
+
+WORKDIR /opt
+COPY Dockerfile.gpu_shell .
+
+WORKDIR /home/vvijayan
+ENTRYPOINT emacs --daemon && bash

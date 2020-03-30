@@ -1,0 +1,43 @@
+FROM vipin/gpu
+
+RUN groupadd -r -g 1001 vvijayan && useradd -s /bin/bash -m -r -u 1001 -g vvijayan vvijayan
+
+USER vvijayan
+WORKDIR /home/vvijayan
+RUN curl -o ./anaconda.sh -O https://repo.anaconda.com/archive/Anaconda3-2020.02-Linux-x86_64.sh && \
+    chmod +x ./anaconda.sh && \
+    ./anaconda.sh -b -p /home/vvijayan/opt/conda && \
+    rm ./anaconda.sh
+
+WORKDIR /home/vvijayan
+RUN /home/vvijayan/opt/conda/bin/conda init bash
+
+# Make RUN commands use `bash --login`:
+SHELL ["/bin/bash", "--login", "-c"]
+
+RUN /home/vvijayan/opt/conda/bin/conda config --set allow_conda_downgrades true && \
+    /home/vvijayan/opt/conda/bin/conda install conda=4.6.14
+
+RUN /home/vvijayan/opt/conda/bin/conda create -y --name modis anaconda keras-gpu tensorflow-gpu gdal opencv jedi flake8 autopep8 yapf black rope progressbar2 python-utils nodejs r-base r-essentials
+
+WORKDIR /home/vvijayan
+RUN echo "conda activate modis" >> .bashrc
+
+# RUN /home/vvijayan/opt/conda/bin/conda install -y keras-gpu tensorflow-gpu gdal opencv jedi flake8 autopep8 yapf black rope progressbar2 python-utils nodejs r-base r-essentials
+
+RUN /home/vvijayan/opt/conda/bin/conda install -y torchvision cudatoolkit=10.1 -c pytorch
+
+# RUN /opt/conda/bin/conda install -y torchvision cudatoolkit=10.1 -c pytorch
+# RUN /opt/conda/bin/conda install -y anaconda keras-gpu tensorflow-gpu gdal opencv \
+#        jedi flake8 autopep8 yapf black rope progressbar2 python-utils \
+#        r-base r-essentials nodejs && \
+#    /opt/conda/bin/conda clean -ya
+
+WORKDIR /opt
+COPY Dockerfile.gpu_user .
+
+# USER vvijayan
+# WORKDIR /home/vvijayan
+# RUN conda create -y --name modis --clone base
+
+WORKDIR /home/vvijayan

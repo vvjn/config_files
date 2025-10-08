@@ -9,6 +9,8 @@
 
 ;; (server-start)
 
+;;(setq xterm-extra-capabilities '(getSelection setSelection))
+
 (defun scroll-up-10-lines ()
   "Scroll up 10 lines"
   (interactive)
@@ -109,41 +111,121 @@ With argument ARG, do this that many times."
 
 (add-hook 'html-mode-hook 'turn-off-auto-fill)
 
-(add-hook 'ess-mode-hook
-          (lambda ()
-            (setq ess-fancy-comments nil)))
-
-(add-hook 'ess-post-run-hook (lambda ()
-  (ess-execute-screen-options)
-  (local-set-key "\C-cw" 'ess-execute-screen-options)))
-(add-hook 'ess-R-post-run-hook (lambda ()
-  (ess-toggle-underscore nil)
-  (setq ess-smart-S-assign-key ";")
-  (ess-toggle-S-assign nil)))
-
 (add-hook 'latex-mode-hook
     (lambda ()
         (visual-line-mode 1)))
 
 (add-hook 'emacs-lisp-mode
     (lambda ()
-        (setq lisp-indent-offset 4)))
+      (setq lisp-indent-offset 4)))
 
+(add-hook 'json-mode-hook
+          (lambda ()
+            (make-local-variable 'js-indent-level)
+            (setq tab-width 2)
+            (setq js-indent-level 2)))
+
+(elpy-enable)
+
+;(setq python-indent-guess-indent-offset t)  
+;(setq python-indent-guess-indent-offset-verbose nil)
+;
 (add-hook 'python-mode-hook    
           (lambda ()
-            (setq indent-tabs-mode nil)
-            (setq tab-width 4)
-            (setq python-indent 4)
-            (elpy-mode)
-            (setq elpy-rpc-virtualenv-path 'current)
-            (pyvenv-activate "/home/vvijayan/opt/conda/envs/modis")
-	    (setq elpy-rpc-backend "rope") ;; "jedi")
-            (setq elpy-rpc-virtualenv-path 'current)
-            (setq python-indent-offset 4)
-            ;;            (setq elpy-rpc-python-command "python3")
-            ;; (local-unset-key (kbd "C-c C-c"))
-            ;; (define-key elpy-mode-map (kbd "C-c C-c") 'elpy-shell-send-statement-and-step)
-            ))
+            (setq indent-tabs-mode nil)))
+
+
+(require 'pyvenv)
+(require 'seq)
+
+(defvar-local my/pyvenv-activated-path nil
+  "Stores the PYVENV_DIR activated for this buffer.")
+
+(defun my/auto-activate-pyvenv ()
+  "Activate the Python virtualenv defined by PYVENV_DIR from dir-locals."
+  (when (and (derived-mode-p 'python-mode)
+             (boundp 'PYVENV_DIR)
+             (file-directory-p PYVENV_DIR)
+             (not (equal pyvenv-virtual-env PYVENV_DIR)))
+    (pyvenv-activate PYVENV_DIR)
+    (setq my/pyvenv-activated-path PYVENV_DIR)
+    (message "Activated PYVENV_DIR: %s" PYVENV_DIR)))
+
+(defun my/buffers-using-venv (venv-path)
+  "Return a list of buffers using the given VENV-PATH."
+  (seq-filter
+   (lambda (buf)
+     (with-current-buffer buf
+       (and (derived-mode-p 'python-mode)
+            (equal my/pyvenv-activated-path venv-path))))
+   (buffer-list)))
+
+(defun my/auto-deactivate-unused-pyvenvs ()
+  "Deactivate the current virtualenv if no buffer still uses it."
+  (when (and pyvenv-virtual-env)
+    (let ((still-used (my/buffers-using-venv pyvenv-virtual-env)))
+      (when (null still-used)
+        (pyvenv-deactivate)
+        (message "Deactivated unused virtualenv: %s" pyvenv-virtual-env)))))
+
+
+
+; (defun my/switch-pyvenv-on-buffer-change ()
+;   "When switching buffers, activate or deactivate virtualenvs as needed."
+;   (when (derived-mode-p 'python-mode)
+;     (when (and my/pyvenv-activated-path
+;                (not (equal pyvenv-virtual-env my/pyvenv-activated-path)))
+;       (pyvenv-activate my/pyvenv-activated-path)
+;       (message "Switched to PYVENV_DIR: %s" my/pyvenv-activated-path)))
+;   (my/auto-deactivate-unused-pyvenvs))
+                                        ;
+
+(defvar my/last-buffer nil
+  "Tracks the last buffer visited to detect real buffer switches.")
+
+(defun my/switch-pyvenv-on-buffer-change ()
+  "Switch pyvenv on real buffer changes only."
+  (let ((current (current-buffer)))
+    (unless (eq current my/last-buffer)
+      (setq my/last-buffer current)
+      (when (derived-mode-p 'python-mode)
+        (when (and my/pyvenv-activated-path
+                   (not (equal pyvenv-virtual-env my/pyvenv-activated-path)))
+          (pyvenv-activate my/pyvenv-activated-path)
+          (message "Switched to PYVENV_DIR: %s" my/pyvenv-activated-path)))))
+  (my/auto-deactivate-unused-pyvenvs))
+
+;; Run activation after dir-locals are loaded
+(add-hook 'hack-local-variables-hook #'my/auto-activate-pyvenv)
+
+;; Deactivate when killing a buffer
+(add-hook 'kill-buffer-hook #'my/auto-deactivate-unused-pyvenvs)
+
+;; Switch env when changing buffers
+(add-hook 'buffer-list-update-hook #'my/switch-pyvenv-on-buffer-change)
+
+
+
+;            (setq tab-width 4)
+;            (setq python-indent 4)
+;            (setq python-indent-offset 4)
+;            ;(elpy-mode)
+;            ;;(setq elpy-rpc-virtualenv-path 'current)
+;            ;(pyvenv-activate (getenv "PYVENV"))
+;	    ;(setq elpy-rpc-backend "jedi") ;; "rope") ;; 
+;            ;(setq elpy-rpc-virtualenv-path 'current)
+;            ;;(elpy-enable)
+;            ;;            (setq elpy-rpc-python-command "python3")
+;            ;; (local-unset-key (kbd "C-c C-c"))
+;            ;; (define-key elpy-mode-map (kbd "C-c C-c") 'elpy-shell-send-statement-and-step)
+;            ))
+;
+;(add-hook
+; 'elpy-mode-hook
+; (lambda ()
+;   (setenv "WORKON_HOME" PYVENV_DIR)
+;   (pyvenv-activate (getenv "WORKON_HOME"))))
+;
 
 (add-hook 'elixir-mode-hook
           (lambda ()
@@ -189,38 +271,10 @@ With argument ARG, do this that many times."
                (skip-syntax-forward " ")
                (+ (current-indentation) julia-indent-offset)))))))
 
-(defun pyvenv-conda ()
-  (interactive)
-  (pyvenv-activate (concat "/opt/conda/envs/" (read-string "Enter conda environment name:"))))
-
-(defun ein:runjulia ()
-  (interactive)
-  (pyvenv-activate "/opt/conda/envs/ed")
-  (ein:run "/opt/conda/envs/julia/bin/jupyter" "/workspace"))
-
-(defun ein:runbase ()
-  (interactive)
-  (pyvenv-activate "/opt/conda")
-  (ein:run "/opt/conda/bin/jupyter" "/workspace"))
 
 (add-hook 'lsp-mode-hook
           (lambda ()
             (local-set-key (kbd "C-c h") 'lsp-describe-thing-at-point)))
-
-(defvar egl-julia--get-root "~/.julia/environments/v1.1")
-(defvar egl-julia--get-depot-path "")
-
-;;(add-to-list 'eglot-server-programs
-;;    `(julia-mode . ("julia" "--startup-file=no" "--history-file=no"
-;;                       (concat "-e using LanguageServer, Sockets, SymbolServer;"
-;;                           " server = LanguageServer.LanguageServerInstance("
-;;                           " stdin, stdout, false,"
-;;                           " \"" (egl-julia--get-root) "\","
-;;                           " \"" (egl-julia--get-depot-path) "\","
-;;                           "Dict());"
-;;                           " server.runlinter = true;"
-;;                           " run(server);"))))
-;;
 
 (setq inferior-julia-program-name "/opt/julia/bin/julia")
 
@@ -305,11 +359,19 @@ With argument ARG, do this that many times."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(ein:completion-backend (quote ein:use-company-backend))
- '(package-selected-packages
-   (quote
-    (magit ess jupyter company-lsp eglot lsp-julia quelpa lsp-mode flyspell-correct-ivy elpy julia-repl counsel popup-kill-ring undo-tree ivy elixir-mode alchemist matlab-mode julia-mode dumb-jump))))
-
+ '(package-selected-packages '(markdown-mode json-mode yaml-mode magit ivy elpy))
+ '(safe-local-variable-values
+   '((PYVENV_DIR . "/home/vipin/venvs/clearml")
+     (PYVENV_DIR . "/home/vipin/venvs/od")
+     (PYVENV_DIR . "/home/vipin/opt/venvs/formation_detection")
+     (PYVENV_DIR . "/home/vipin/opt/venvs/nm_vidinf")
+     (PYVENV_DIR . "/home/vipin/opt/venvs/quizrush")
+     (PYVENV_DIR . "/home/vipin/opt/venvs/football")
+     (PYVENV_DIR . "/home/vipin/opt/venvs/fun")
+     (PYVENV_DIR . "/home/vipin/opt/venvs/rdcode/")
+     (PYVENV_DIR . "/home/vipin/opt/venvs/racode/")
+     (PYVENV_DIR . "/home/vipin/opt/venvs/rdcode")
+     (PYVENV_DIR . "/home/vipin/opt/venvs/racode") (PYVENV_DIR . t))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.

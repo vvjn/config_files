@@ -52,7 +52,7 @@
 (counsel-mode 1)
 
 (require 'swiper)
-;; (global-set-key (kbd "C-s") 'swiper)
+(global-set-key (kbd "C-c C-s") 'swiper)
 
 (xterm-mouse-mode 1)
 (global-set-key (kbd "C-M-y") 'popup-kill-ring)

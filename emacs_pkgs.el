@@ -15,7 +15,7 @@
 ;; List of packages to install
 (setq my-packages
       '(elpy
-        pyvenv jedi rope black isort flake8 yasnippet mypy
+        pyvenv jedi yasnippet kind-icon
         corfu cape 
         ivy counsel swiper 
         magit projectile))

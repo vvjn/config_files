@@ -31,8 +31,29 @@
 ;;(add-hook 'after-init-hook 'ivy-mode)
 ;; (define-key flyspell-mode-map (kbd "C-;") 'flyspell-correct-wrapper)
 
-;;(global-company-mode)
+;; (require 'company)
+;; (global-company-mode 1)
+;; (setq company-idle-delay 0.1
+;;       company-minimum-prefix-length 1)
+;; (setq company-tooltip-align-annotations t)
+
 ;;(ivy-mode)
+
+;; Minimal Ivy everywhere
+(require 'ivy)
+(ivy-mode 1)
+(setq ivy-use-virtual-buffers t
+      enable-recursive-minibuffers t
+      ivy-wrap t
+      ivy-count-format "(%d/%d) "
+      ivy-re-builders-alist '((t . ivy--regex-fuzzy)))
+
+(require 'counsel)
+(counsel-mode 1)
+
+(require 'swiper)
+;; (global-set-key (kbd "C-s") 'swiper)
+
 (xterm-mouse-mode 1)
 (global-set-key (kbd "C-M-y") 'popup-kill-ring)
 ;;(global-set-key (kbd "C-c C-s") 'swiper)
@@ -98,7 +119,7 @@ With argument ARG, do this that many times."
 (setq tab-width 4)
 (setq-default c-basic-offset 4)
 
-(global-hl-line-mode 0)
+;;(global-hl-line-mode 0)
 
 (global-set-key (kbd "C-x g") 'goto-line)
 ;; (global-set-key (kbd "<mouse-2>") nil)
@@ -109,18 +130,18 @@ With argument ARG, do this that many times."
 
 (add-hook 'html-mode-hook 'turn-off-auto-fill)
 
-(add-hook 'ess-mode-hook
-          (lambda ()
-            (setq ess-fancy-comments nil)))
-
-(add-hook 'ess-post-run-hook (lambda ()
-  (ess-execute-screen-options)
-  (local-set-key "\C-cw" 'ess-execute-screen-options)))
-(add-hook 'ess-R-post-run-hook (lambda ()
-  (ess-toggle-underscore nil)
-  (setq ess-smart-S-assign-key ";")
-  (ess-toggle-S-assign nil)))
-
+;;(add-hook 'ess-mode-hook
+;;          (lambda ()
+;;            (setq ess-fancy-comments nil)))
+;;
+;; (add-hook 'ess-post-run-hook (lambda ()
+;;   (ess-execute-screen-options)
+;;   (local-set-key "\C-cw" 'ess-execute-screen-options)))
+;; (add-hook 'ess-R-post-run-hook (lambda ()
+;;   (ess-toggle-underscore nil)
+;;   (setq ess-smart-S-assign-key ";")
+;;   (ess-toggle-S-assign nil)))
+;; 
 (add-hook 'latex-mode-hook
     (lambda ()
         (visual-line-mode 1)))
@@ -129,22 +150,63 @@ With argument ARG, do this that many times."
     (lambda ()
         (setq lisp-indent-offset 4)))
 
-(add-hook 'python-mode-hook    
-          (lambda ()
-            (setq indent-tabs-mode nil)
-            (setq tab-width 4)
-            (setq python-indent 4)
-            (elpy-mode)
-            (setq elpy-rpc-virtualenv-path 'current)
-            (pyvenv-activate "/home/vvijayan/opt/conda/envs/modis")
-	    (setq elpy-rpc-backend "rope") ;; "jedi")
-            (setq elpy-rpc-virtualenv-path 'current)
-            (setq python-indent-offset 4)
-            ;;            (setq elpy-rpc-python-command "python3")
-            ;; (local-unset-key (kbd "C-c C-c"))
-            ;; (define-key elpy-mode-map (kbd "C-c C-c") 'elpy-shell-send-statement-and-step)
-            ))
+(require 'elpy)
+(elpy-enable)
 
+(with-eval-after-load 'company
+  (add-to-list 'company-backends 'elpy-company-backend))
+
+(require 'pyvenv)
+
+;; Make Elpy use the active venv for its backend
+(setq elpy-rpc-virtualenv-path 'current)
+(add-hook 'pyvenv-post-activate-hooks #'elpy-rpc-restart)
+(add-hook 'pyvenv-post-deactivate-hooks #'elpy-rpc-restart)
+
+(defun my/python-auto-venv ()
+  "Activate venv if pyvenv-activate is set in dir-locals."
+  (when (and (boundp 'pyvenv-activate) pyvenv-activate)
+    (unless (string= pyvenv-activate pyvenv-virtual-env)
+      (message "Activating venv: %s" pyvenv-activate)
+      (pyvenv-activate pyvenv-activate))))
+
+(add-hook 'python-mode-hook #'my/python-auto-venv)
+
+
+(require 'corfu)
+(global-corfu-mode 1)
+
+(require 'kind-icon)
+(add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter)
+(require 'cape)
+(add-to-list 'completion-at-point-functions #'elpy-completion-at-point)
+(setq completion-at-point-functions
+      (list #'elpy-completion-at-point
+            #'cape-dabbrev
+            #'cape-file))
+(setq corfu-auto t)          ;; popup automatically
+(setq corfu-auto-delay 0.1)  ;; short delay
+(setq corfu-min-width 20)
+(setq corfu-max-width 80)
+(setq corfu-cycle t)         ;; cycle through candidates
+
+
+;; (add-hook 'python-mode-hook    
+;;           (lambda ()
+;;             (setq indent-tabs-mode nil)
+;;             (setq tab-width 4)
+;;             (setq python-indent 4)
+;;             (elpy-mode)
+;;             (setq elpy-rpc-virtualenv-path 'current)
+;;             (pyvenv-activate "/home/vvijayan/opt/conda/envs/modis")
+;; 	    (setq elpy-rpc-backend "rope") ;; "jedi")
+;;             (setq elpy-rpc-virtualenv-path 'current)
+;;             (setq python-indent-offset 4)
+;;             ;;            (setq elpy-rpc-python-command "python3")
+;;             ;; (local-unset-key (kbd "C-c C-c"))
+;;             ;; (define-key elpy-mode-map (kbd "C-c C-c") 'elpy-shell-send-statement-and-step)
+;;             ))
+;; 
 (add-hook 'elixir-mode-hook
           (lambda ()
             (alchemist-mode)))
@@ -189,26 +251,10 @@ With argument ARG, do this that many times."
                (skip-syntax-forward " ")
                (+ (current-indentation) julia-indent-offset)))))))
 
-(defun pyvenv-conda ()
-  (interactive)
-  (pyvenv-activate (concat "/opt/conda/envs/" (read-string "Enter conda environment name:"))))
-
-(defun ein:runjulia ()
-  (interactive)
-  (pyvenv-activate "/opt/conda/envs/ed")
-  (ein:run "/opt/conda/envs/julia/bin/jupyter" "/workspace"))
-
-(defun ein:runbase ()
-  (interactive)
-  (pyvenv-activate "/opt/conda")
-  (ein:run "/opt/conda/bin/jupyter" "/workspace"))
 
 (add-hook 'lsp-mode-hook
           (lambda ()
             (local-set-key (kbd "C-c h") 'lsp-describe-thing-at-point)))
-
-(defvar egl-julia--get-root "~/.julia/environments/v1.1")
-(defvar egl-julia--get-depot-path "")
 
 ;;(add-to-list 'eglot-server-programs
 ;;    `(julia-mode . ("julia" "--startup-file=no" "--history-file=no"
@@ -221,8 +267,6 @@ With argument ARG, do this that many times."
 ;;                           " server.runlinter = true;"
 ;;                           " run(server);"))))
 ;;
-
-(setq inferior-julia-program-name "/opt/julia/bin/julia")
 
 ;(visual-line-mode 1)
 ;(transient-mark-mode 0)
@@ -305,10 +349,13 @@ With argument ARG, do this that many times."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(ein:completion-backend (quote ein:use-company-backend))
+;; '(ein:completion-backend 'ein:use-company-backend)
  '(package-selected-packages
-   (quote
-    (magit ess jupyter company-lsp eglot lsp-julia quelpa lsp-mode flyspell-correct-ivy elpy julia-repl counsel popup-kill-ring undo-tree ivy elixir-mode alchemist matlab-mode julia-mode dumb-jump))))
+   '(alchemist cape company-lsp corfu counsel dumb-jump eglot elixir-mode
+               elpy ess flyspell-correct-ivy ivy jedi julia-mode
+               julia-repl jupyter kind-icon lsp-julia lsp-mode
+               lua-mode magit matlab-mode popup-kill-ring quelpa
+               undo-tree)))
 
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
